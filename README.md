@@ -12,9 +12,9 @@ A new, isolated virtual-chip Texas Hold’em project. No Royal Casino repository
 
 ## Honest release boundaries
 
-The deployed website is an **early-access frontend and 3D room preview**. The multiplayer server is implemented and tested locally but **has not been deployed to a persistent WebSocket host**. Online registration is explicitly closed until configuration exists. The Supabase email login path is implemented but not provisioned or integration-tested. Google login is not implemented.
+The deployed website is an **early-access frontend and 3D room preview**. The multiplayer server is implemented and tested locally. A hosted service may run in **provisioning mode** until its Auth and PostgreSQL configuration is present; provisioning mode exposes health/readiness only and denies gameplay. Online registration is explicitly closed until configuration exists. The Supabase email login path is implemented but not provisioned or integration-tested. Google login is not implemented.
 
-The current durable backend uses a private **SQLite** file for the single-process milestone. PostgreSQL is the next persistence milestone; this version must not be horizontally scaled or advertised as production-ready. Supabase is not shared with another project. Account names in development are display names, not globally unique handles.
+Development uses a private **SQLite** file. The hosted path requires **PostgreSQL** and includes transactional snapshots, audit/history and process-owner fencing; this version must not be horizontally scaled or advertised as production-ready. Supabase is not shared with another project. Account names in development are display names, not globally unique handles.
 
 The frontend uses the supplied Sites Vinext (Next-compatible) deployment adapter; the game server remains a separate Node process. Vercel frontend deployment is a prepared future option, not a completed deployment. Do not run the game server as a short-lived frontend function.
 
@@ -53,17 +53,19 @@ Game server:
 
 - `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`: for server-side Auth user validation.
 - `ALLOWED_ORIGINS`: exact comma-separated frontend origins. No wildcard.
-- `DATABASE_PATH`: private persistent disk path, e.g. `/data/velora.sqlite`.
+- `DATABASE_URL`: a server-only PostgreSQL connection URL with verified TLS (use Supabase direct/session-pooler, not transaction pooling). Do not paste this secret in chat.
+- `DATABASE_PATH`: local development SQLite path only.
 - `PORT`: platform-assigned port (defaults to 8080).
 - `DEV_GUEST_AUTH` must be unset in hosted environments.
 
-No service-role key is needed by the current server. Never put a secret or service-role key in a public frontend variable. Supabase Auth tokens are checked against `/auth/v1/user`; expiration is enforced for connected sockets. Automatic refresh, revocation enforcement, password recovery and OAuth remain release gates.
+Apply `server/schema.sql` to the new project before starting the hosted game. The schema is private and has no client grants. `server/migrate.ts` can apply it using a server-only database credential; use the Supabase connected SQL tool when available. No service-role key is needed by the current server. Never put a secret or service-role key in a public frontend variable. Supabase Auth tokens are checked against `/auth/v1/user`; expiration is enforced for connected sockets. Automatic refresh, revocation enforcement, password recovery and OAuth remain release gates.
 
 ## Files
 
 - `game/engine.ts`: game state machine and rank evaluation.
 - `server/app.ts`: HTTP/WebSocket transport, auth, wallet and snapshot persistence.
-- `server/index.ts`: fail-closed server entry point.
+- `server/index.ts`: fail-closed server entry point with provisioning readiness.
+- `server/storage.ts`, `server/schema.sql`: durable storage adapters and private PostgreSQL schema.
 - `app/page.tsx`, `components/PokerScene.tsx`: lobby and playable table client.
 - `tests/`: engine and genuine multi-client socket integration tests.
 - `docs/ARCHITECTURE.md`: target architecture, resources, budgets and schema plan.

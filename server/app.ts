@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { randomBytes, randomUUID, createHash, scryptSync, timingSafeEqual } from 'node:crypto';
-import { DatabaseSync } from 'node:sqlite';
+import { sqliteStore, type SnapshotStore } from './storage.ts';
 import { WebSocketServer, WebSocket } from 'ws';
 import { act, active, newTable, seat, start, view } from '../game/engine.ts';
 import type { Table, Move } from '../game/engine.ts';
@@ -32,34 +32,38 @@ type State = {
     rooms: Record<string, Room>;
     ledger: Ledger[];
 };
-export function createGameServer(opts: {
+export async function createGameServer(opts: {
     database?: string;
+    storage?: SnapshotStore;
     guest?: boolean;
     origins?: string[];
     supabaseUrl?: string;
     publishableKey?: string;
     autoStart?: boolean;
 } = {}) {
-    const db = new DatabaseSync(opts.database || ':memory:');
-    db.exec('PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS snapshots(id INTEGER PRIMARY KEY CHECK(id=1),data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS audit(id TEXT PRIMARY KEY,user_id TEXT NOT NULL,delta INTEGER NOT NULL,reason TEXT NOT NULL,time INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS hand_history(id TEXT PRIMARY KEY,table_id TEXT NOT NULL,result TEXT NOT NULL,completed_at INTEGER NOT NULL)');
-    let state: State = JSON.parse((db.prepare('SELECT data FROM snapshots WHERE id=1').get() as {
-        data: string;
-    } | undefined)?.data || 'null') || { accounts: {}, sessions: {}, rooms: { aurora: { table: newTable('aurora', 'Aurora Lounge', 6) }, meridian: { table: newTable('meridian', 'The Meridian', 9) }, duel: { table: newTable('duel', 'Heads-up Club', 2) } }, ledger: [] };
+    const storage = opts.storage || sqliteStore(opts.database || ':memory:');
+    let state: State = (await storage.load()) as State || { accounts: {}, sessions: {}, rooms: { aurora: { table: newTable('aurora', 'Aurora Lounge', 6) }, meridian: { table: newTable('meridian', 'The Meridian', 9) }, duel: { table: newTable('duel', 'Heads-up Club', 2) } }, ledger: [] };
     Object.values(state.rooms).forEach(r => r.table.seats.forEach(p => p.connected = false));
-    const save = () => { db.exec('BEGIN IMMEDIATE'); try {
-        db.prepare('INSERT INTO snapshots VALUES(1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data').run(JSON.stringify(state));
-        const ins = db.prepare('INSERT OR IGNORE INTO audit VALUES(?,?,?,?,?)');
-        for (const l of state.ledger)
-            ins.run(l.id, l.user, l.delta, l.reason, l.time);
-        for (const r of Object.values(state.rooms))
-            if (r.table.phase === 'complete')
-                db.prepare('INSERT OR IGNORE INTO hand_history VALUES(?,?,?,?)').run(r.table.handId, r.table.id, JSON.stringify(view(r.table, 'spectator')), Date.now());
-        db.exec('COMMIT');
-    }
-    catch (e) {
-        db.exec('ROLLBACK');
-        throw e;
-    } };
+    let faulted = false, closing = false;
+    let pending = Promise.resolve();
+    const exclusive = <T>(operation: () => Promise<T>): Promise<T> => {
+        const task = pending.then(() => { if (faulted || closing)
+            throw Error('Game service unavailable'); return operation(); });
+        pending = task.then(() => { }, () => { });
+        return task;
+    };
+    const save = async () => {
+        const hands = Object.values(state.rooms).filter(r => r.table.phase === 'complete').map(r => ({ id: r.table.handId, tableId: r.table.id, result: view(r.table, 'spectator') }));
+        try {
+            await storage.save(state, state.ledger, hands);
+        }
+        catch (error) {
+            faulted = true;
+            for (const ws of clients.keys())
+                ws.close(1011, 'Storage unavailable');
+            throw Error('Durable storage unavailable; action was not acknowledged');
+        }
+    };
     const ledger = (a: Account, delta: number, reason: string) => { a.wallet += delta; state.ledger.push({ id: randomUUID(), user: a.id, delta, reason, time: Date.now() }); state.ledger = state.ledger.slice(-300); };
     const clients = new Map<WebSocket, {
         id?: string;
@@ -70,15 +74,20 @@ export function createGameServer(opts: {
         alive: boolean;
     }>();
     const online = (id: string) => [...clients.values()].some(c => c.id === id);
-    const send = (ws: WebSocket, data: unknown) => { if (ws.readyState === WebSocket.OPEN) {
-        if (ws.bufferedAmount > 1024 * 1024)
-            ws.close(1013, 'Slow connection');
-        else
-            ws.send(JSON.stringify(data));
-    } };
+    const send = (ws: WebSocket, data: unknown) => {
+        if (ws.readyState === WebSocket.OPEN) {
+            if (ws.bufferedAmount > 1024 * 1024)
+                ws.close(1013, 'Slow connection');
+            else
+                ws.send(JSON.stringify(data));
+        }
+    };
     const lobby = () => Object.values(state.rooms).filter(r => !r.password).map(r => ({ id: r.table.id, name: r.table.name, capacity: r.table.capacity, seated: r.table.seats.length, blinds: `${r.table.small} / ${r.table.big}`, phase: r.table.phase }));
-    const broadcast = () => clients.forEach((c, ws) => { if (!c.id)
-        return; send(ws, { type: 'state', user: (({ id, name, wallet, daily }) => ({ id, name, wallet, daily }))(state.accounts[c.id]), lobby: lobby(), table: c.room ? view(state.rooms[c.room].table, c.id) : null }); });
+    const broadcast = () => clients.forEach((c, ws) => {
+        if (!c.id)
+            return;
+        send(ws, { type: 'state', user: (({ id, name, wallet, daily }) => ({ id, name, wallet, daily }))(state.accounts[c.id]), lobby: lobby(), table: c.room ? view(state.rooms[c.room].table, c.id) : null });
+    });
     const rate = new Map<string, {
         n: number;
         at: number;
@@ -100,8 +109,12 @@ export function createGameServer(opts: {
             res.writeHead(204);
             return res.end();
         }
+        if (req.url === '/ready') {
+            res.writeHead(faulted ? 503 : 200);
+            return res.end(JSON.stringify({ ready: !faulted, storage: storage.kind }));
+        }
         if (req.url === '/health') {
-            return res.end(JSON.stringify({ status: 'ok', service: 'velora-game', protocol: 1, auth: opts.guest ? 'development-guest' : 'supabase', tables: Object.keys(state.rooms).length, connections: clients.size, uptime: Math.floor(process.uptime()) }));
+            return res.end(JSON.stringify({ status: faulted ? 'unavailable' : 'ok', storage: storage.kind, service: 'velora-game', protocol: 1, auth: opts.guest ? 'development-guest' : 'supabase', tables: Object.keys(state.rooms).length, connections: clients.size, uptime: Math.floor(process.uptime()) }));
         }
         if (req.url === '/guest' && req.method === 'POST' && opts.guest) {
             const key = req.socket.remoteAddress || 'unknown';
@@ -125,12 +138,21 @@ export function createGameServer(opts: {
                 const name = String(JSON.parse(body).name || '').trim();
                 if (!/^[\p{L}\p{N}_ -]{2,20}$/u.test(name))
                     throw Error('Name must be 2–20 letters or numbers');
-                const id = randomUUID(), token = randomBytes(32).toString('hex');
-                state.accounts[id] = { id, name, wallet: 10000, daily: '', receipts: [] };
-                state.sessions[createHash('sha256').update(token).digest('hex')] = { id, expires: Date.now() + 86400000 };
-                state.ledger.push({ id: randomUUID(), user: id, delta: 10000, reason: 'welcome', time: Date.now() });
-                save();
-                res.end(JSON.stringify({ token, id }));
+                await exclusive(async () => {
+                    const before = JSON.stringify(state);
+                    const id = randomUUID(), token = randomBytes(32).toString('hex');
+                    state.accounts[id] = { id, name, wallet: 10000, daily: '', receipts: [] };
+                    state.sessions[createHash('sha256').update(token).digest('hex')] = { id, expires: Date.now() + 86400000 };
+                    state.ledger.push({ id: randomUUID(), user: id, delta: 10000, reason: 'welcome', time: Date.now() });
+                    try {
+                        await save();
+                    }
+                    catch (error) {
+                        state = JSON.parse(before);
+                        throw error;
+                    }
+                    res.end(JSON.stringify({ token, id }));
+                });
             }
             catch (e) {
                 res.writeHead(400);
@@ -142,10 +164,13 @@ export function createGameServer(opts: {
         res.end('{"error":"Not found"}');
     });
     const wss = new WebSocketServer({ noServer: true, maxPayload: 8192, perMessageDeflate: false });
-    http.on('upgrade', (req, socket, head) => { if (req.url !== '/ws' || (req.headers.origin && !(opts.origins || []).includes(req.headers.origin)) || clients.size >= 500) {
-        socket.destroy();
-        return;
-    } wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req)); });
+    http.on('upgrade', (req, socket, head) => {
+        if (req.url !== '/ws' || (req.headers.origin && !(opts.origins || []).includes(req.headers.origin)) || clients.size >= 500) {
+            socket.destroy();
+            return;
+        }
+        wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+    });
     wss.on('connection', ws => {
         const c = { count: 0, window: Date.now(), alive: true } as {
             id?: string;
@@ -156,12 +181,13 @@ export function createGameServer(opts: {
             alive: boolean;
         };
         clients.set(ws, c);
-        const authTimer = setTimeout(() => { if (!c.id)
-            ws.close(1008, 'Authenticate first'); }, 10000);
-        let queue = Promise.resolve();
+        const authTimer = setTimeout(() => {
+            if (!c.id)
+                ws.close(1008, 'Authenticate first');
+        }, 10000);
         ws.on('pong', () => { c.alive = true; });
         ws.on('message', raw => {
-            queue = queue.then(async () => {
+            void exclusive(async () => {
                 let snapshot: string | undefined;
                 try {
                     if (Date.now() - c.window > 10000) {
@@ -172,6 +198,7 @@ export function createGameServer(opts: {
                         throw Error('Rate limit exceeded');
                     const m = JSON.parse(String(raw));
                     if (m.type === 'auth') {
+                        snapshot = JSON.stringify(state);
                         if (c.id)
                             throw Error('Already authenticated');
                         if (typeof m.token !== 'string' || m.token.length > 4096)
@@ -220,7 +247,7 @@ export function createGameServer(opts: {
                                 c.room = r.table.id;
                             }
                         }
-                        save();
+                        await save();
                         send(ws, { type: 'authenticated', id });
                         broadcast();
                         return;
@@ -316,7 +343,7 @@ export function createGameServer(opts: {
                     }
                     a.receipts.push(m.id);
                     a.receipts = a.receipts.slice(-2000);
-                    save();
+                    await save();
                     send(ws, { type: 'ack', id: m.id });
                     broadcast();
                 }
@@ -327,44 +354,90 @@ export function createGameServer(opts: {
                 }
             }).catch(() => ws.close(1011, 'Server error'));
         });
-        ws.on('close', () => { clearTimeout(authTimer); clients.delete(ws); if (c.id && !online(c.id))
-            Object.values(state.rooms).forEach(r => { const p = r.table.seats.find(p => p.id === c.id); if (p)
-                p.connected = false; }); save(); broadcast(); });
+        ws.on('close', () => {
+            clearTimeout(authTimer);
+            clients.delete(ws);
+            if (closing)
+                return;
+            void exclusive(async () => {
+                if (c.id && !online(c.id))
+                    Object.values(state.rooms).forEach(r => { const p = r.table.seats.find(p => p.id === c.id); if (p)
+                        p.connected = false; });
+                await save();
+                broadcast();
+            }).catch(() => { });
+        });
     });
-    const timer = setInterval(() => { let changed = false; for (const r of Object.values(state.rooms)) {
-        const t = r.table;
-        if (active(t) && t.deadline <= Date.now()) {
-            const p = t.seats[t.turn];
-            if (p) {
-                act(t, p.id, { type: p.bet >= t.current ? 'check' : 'fold' });
-                changed = true;
+    const timer = setInterval(() => {
+        void exclusive(async () => {
+            let changed = false;
+            const before = JSON.stringify(state);
+            for (const r of Object.values(state.rooms)) {
+                const t = r.table;
+                if (active(t) && t.deadline <= Date.now()) {
+                    const p = t.seats[t.turn];
+                    if (p) {
+                        act(t, p.id, { type: p.bet >= t.current ? 'check' : 'fold' });
+                        changed = true;
+                    }
+                }
+                else if (opts.autoStart !== false && !active(t) && t.seats.filter(p => p.connected && p.stack > 0).length >= 2) {
+                    const latest = completed.get(t.id);
+                    if (!latest)
+                        completed.set(t.id, Date.now());
+                    else if (Date.now() - latest > 7000) {
+                        start(t);
+                        completed.delete(t.id);
+                        changed = true;
+                    }
+                }
+                else
+                    completed.delete(t.id);
             }
-        }
-        else if (opts.autoStart !== false && !active(t) && t.seats.filter(p => p.connected && p.stack > 0).length >= 2) {
-            const latest = completed.get(t.id);
-            if (!latest) {
-                completed.set(t.id, Date.now());
+            if (changed) {
+                try {
+                    await save();
+                }
+                catch (error) {
+                    state = JSON.parse(before);
+                    throw error;
+                }
+                broadcast();
             }
-            else if (Date.now() - latest > 7000) {
-                start(t);
-                completed.delete(t.id);
-                changed = true;
-            }
-        }
-        else
-            completed.delete(t.id);
-    } if (changed) {
-        save();
-        broadcast();
-    } }, 1000);
+        }).catch(() => { });
+    }, 1000);
     const completed = new Map<string, number>();
-    const heartbeat = setInterval(() => { clients.forEach((c, ws) => { if ((c.id && c.expires && c.expires <= Date.now()) || !c.alive) {
-        ws.terminate();
-        return;
-    } c.alive = false; ws.ping(); }); for (const [ip, b] of rate)
-        if (Date.now() - b.at > 120000)
-            rate.delete(ip); }, 15000);
-    save();
-    return { http, wss, close: async () => { clearInterval(timer); clearInterval(heartbeat); for (const ws of clients.keys())
-            ws.terminate(); await new Promise<void>(resolve => wss.close(() => resolve())); await new Promise<void>(resolve => http.close(() => resolve())); db.close(); } };
+    const heartbeat = setInterval(() => {
+        clients.forEach((c, ws) => {
+            if ((c.id && c.expires && c.expires <= Date.now()) || !c.alive) {
+                ws.terminate();
+                return;
+            }
+            c.alive = false;
+            ws.ping();
+        });
+        for (const [ip, b] of rate)
+            if (Date.now() - b.at > 120000)
+                rate.delete(ip);
+    }, 15000);
+    try {
+        await save();
+    }
+    catch (error) {
+        clearInterval(timer);
+        clearInterval(heartbeat);
+        await storage.close();
+        throw error;
+    }
+    return { http, wss, close: async () => {
+            closing = true;
+            clearInterval(timer);
+            clearInterval(heartbeat);
+            for (const ws of clients.keys())
+                ws.terminate();
+            await pending;
+            await new Promise<void>(resolve => wss.close(() => resolve()));
+            await new Promise<void>(resolve => http.close(() => resolve()));
+            await storage.close();
+        } };
 }

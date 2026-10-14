@@ -11,19 +11,42 @@ type Message = {
     type: string;
     [key: string]: any;
 };
-async function client(base: string, token: string) { const ws = new WebSocket(base.replace('http', 'ws') + '/ws'); let current: Message | undefined; const inbox: Message[] = []; ws.on('message', r => { const m = JSON.parse(String(r)); inbox.push(m); if (m.type === 'state')
-    current = m; }); await once(ws, 'open'); const wait = async (predicate: (m: Message) => boolean) => { for (let n = 0; n < 300; n++) {
-    const i = inbox.findIndex(predicate);
-    if (i >= 0)
-        return inbox.splice(i, 1)[0];
-    await new Promise(r => setTimeout(r, 5));
-} throw Error('Message timeout: ' + JSON.stringify(inbox)); }; const send = (m: object) => ws.send(JSON.stringify(m)); send({ type: 'auth', token }); await wait(m => m.type === 'authenticated'); await wait(m => m.type === 'state'); return { ws, wait, send, get state() { return current!; }, async command(m: Record<string, unknown>) { const id = randomUUID(); send({ ...m, id }); const r = await wait(r => r.type === 'ack' && r.id === id || r.type === 'error'); await new Promise(r => setTimeout(r, 10)); return r; } }; }
-async function guest(base: string, name: string) { const r = await fetch(base + '/guest', { method: 'POST', body: JSON.stringify({ name }) }); assert.equal(r.status, 200); return await r.json() as {
-    token: string;
-    id: string;
-}; }
+async function client(base: string, token: string) {
+    const ws = new WebSocket(base.replace('http', 'ws') + '/ws');
+    let current: Message | undefined;
+    const inbox: Message[] = [];
+    ws.on('message', r => {
+        const m = JSON.parse(String(r));
+        inbox.push(m);
+        if (m.type === 'state')
+            current = m;
+    });
+    await once(ws, 'open');
+    const wait = async (predicate: (m: Message) => boolean) => {
+        for (let n = 0; n < 300; n++) {
+            const i = inbox.findIndex(predicate);
+            if (i >= 0)
+                return inbox.splice(i, 1)[0];
+            await new Promise(r => setTimeout(r, 5));
+        }
+        throw Error('Message timeout: ' + JSON.stringify(inbox));
+    };
+    const send = (m: object) => ws.send(JSON.stringify(m));
+    send({ type: 'auth', token });
+    await wait(m => m.type === 'authenticated');
+    await wait(m => m.type === 'state');
+    return { ws, wait, send, get state() { return current!; }, async command(m: Record<string, unknown>) { const id = randomUUID(); send({ ...m, id }); const r = await wait(r => r.type === 'ack' && r.id === id || r.type === 'error'); await new Promise(r => setTimeout(r, 10)); return r; } };
+}
+async function guest(base: string, name: string) {
+    const r = await fetch(base + '/guest', { method: 'POST', body: JSON.stringify({ name }) });
+    assert.equal(r.status, 200);
+    return await r.json() as {
+        token: string;
+        id: string;
+    };
+}
 test('real WebSocket clients: auth, duplicate buy-in, full hand, privacy, reconnect, wallet and private room gates', { timeout: 20000 }, async () => {
-    const app = createGameServer({ guest: true, autoStart: false });
+    const app = await createGameServer({ guest: true, autoStart: false });
     app.http.listen(0, '127.0.0.1');
     await once(app.http, 'listening');
     const base = `http://127.0.0.1:${(app.http.address() as any).port}`;
@@ -95,7 +118,7 @@ test('real WebSocket clients: auth, duplicate buy-in, full hand, privacy, reconn
 test('durable snapshot restores sessions, table state, wallet and duplicate receipts', { timeout: 10000 }, async () => {
     const dir = mkdtempSync(join(tmpdir(), 'velora-'));
     const path = join(dir, 'game.sqlite');
-    let app = createGameServer({ database: path, guest: true, autoStart: false });
+    let app = await createGameServer({ database: path, guest: true, autoStart: false });
     let live: Awaited<ReturnType<typeof client>> | undefined;
     const listen = async () => { app.http.listen(0, '127.0.0.1'); await once(app.http, 'listening'); return `http://127.0.0.1:${(app.http.address() as any).port}`; };
     try {
@@ -106,7 +129,7 @@ test('durable snapshot restores sessions, table state, wallet and duplicate rece
         live.ws.terminate();
         await new Promise(r => setTimeout(r, 10));
         await app.close();
-        app = createGameServer({ database: path, guest: true, autoStart: false });
+        app = await createGameServer({ database: path, guest: true, autoStart: false });
         base = await listen();
         live = await client(base, g.token);
         assert.equal(live.state.user.wallet, 9000);
@@ -118,5 +141,69 @@ test('durable snapshot restores sessions, table state, wallet and duplicate rece
         await new Promise(r => setTimeout(r, 10));
         await app.close();
         rmSync(dir, { recursive: true });
+    }
+});
+test('async durable saves serialize simultaneous duplicate rewards before acknowledgement', async () => {
+    const { sqliteStore } = await import('../server/storage.ts');
+    const baseStore = sqliteStore();
+    let inFlight = 0, maxInFlight = 0;
+    const storage = { ...baseStore, async save(...args: Parameters<typeof baseStore.save>) { inFlight++; maxInFlight = Math.max(maxInFlight, inFlight); try {
+            await new Promise(r => setTimeout(r, 15));
+            await baseStore.save(...args);
+        }
+        finally {
+            inFlight--;
+        } } };
+    const app = await createGameServer({ storage, guest: true, autoStart: false });
+    app.http.listen(0, '127.0.0.1');
+    await once(app.http, 'listening');
+    const base = `http://127.0.0.1:${(app.http.address() as any).port}`;
+    let c: Awaited<ReturnType<typeof client>> | undefined;
+    try {
+        const g = await guest(base, 'Atomic');
+        c = await client(base, g.token);
+        const id = randomUUID();
+        c.send({ type: 'daily', id });
+        c.send({ type: 'daily', id });
+        const first = await c.wait(m => m.type === 'ack' && m.id === id);
+        const second = await c.wait(m => m.type === 'ack' && m.id === id);
+        assert.ok(!first.duplicate && second.duplicate);
+        await new Promise(r => setTimeout(r, 20));
+        assert.equal(c.state.user.wallet, 11000);
+        assert.equal(maxInFlight, 1);
+    }
+    finally {
+        c?.ws.terminate();
+        await app.close();
+    }
+});
+test('a failed durable commit closes gameplay without acknowledging or saving a reward', async () => {
+    const { sqliteStore } = await import('../server/storage.ts');
+    const baseStore = sqliteStore();
+    let fail = false;
+    const storage = { ...baseStore, async save(...args: Parameters<typeof baseStore.save>) { if (fail)
+            throw Error('Injected database failure'); await baseStore.save(...args); } };
+    const app = await createGameServer({ storage, guest: true, autoStart: false });
+    app.http.listen(0, '127.0.0.1');
+    await once(app.http, 'listening');
+    const base = `http://127.0.0.1:${(app.http.address() as any).port}`;
+    let c: Awaited<ReturnType<typeof client>> | undefined;
+    try {
+        const g = await guest(base, 'Failure');
+        c = await client(base, g.token);
+        let ack = false;
+        c.ws.on('message', raw => { if (JSON.parse(String(raw)).type === 'ack')
+            ack = true; });
+        fail = true;
+        c.send({ type: 'daily', id: randomUUID() });
+        await once(c.ws, 'close');
+        assert.equal(ack, false);
+        assert.equal((await fetch(base + '/ready')).status, 503);
+        const saved = await baseStore.load() as any;
+        assert.equal(saved.accounts[g.id].wallet, 10000);
+    }
+    finally {
+        c?.ws.terminate();
+        await app.close();
     }
 });

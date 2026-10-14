@@ -8,11 +8,11 @@ Candidates: Velora Poker (recommended working name), Aurelian Poker, Orbit Royal
 
 Browser → Sites-hosted React/Vinext frontend and public configuration route.
 
-Separately runnable browser client → HTTPS + WSS → single Node 24 authoritative game server → private SQLite snapshot/audit store.
+Separately runnable browser client → HTTPS + WSS → single Node 24 authoritative game server → private SQLite (development) or PostgreSQL (hosted) snapshot/audit store.
 
 The browser receives only a player-scoped projection. The deck and other players' private cards never leave the authoritative process. A spectator receives null card placeholders until an eligible showdown. Folded hole cards stay hidden.
 
-The Node server serializes mutations synchronously, checks authentication/expiry and table revision, validates rules, updates balances and state, commits the SQLite transaction, then acknowledges/broadcasts. Failed command mutations restore the preceding snapshot. Duplicate IDs return acknowledgments without applying rewards or bets twice. Stale hand IDs and versions prevent old commands being used in a later hand.
+The Node server serializes mutations through one async queue, checks authentication/expiry and table revision, validates rules, updates balances and state, commits the selected storage transaction, then acknowledges/broadcasts. Failed command mutations restore the preceding snapshot. Duplicate IDs return acknowledgments without applying rewards or bets twice. Stale hand IDs and versions prevent old commands being used in a later hand.
 
 ## Intended production topology
 
@@ -25,13 +25,13 @@ Start with one Singapore-region game service and measure real round-trip times. 
 | Resource | State / next action |
 |---|---|
 | Isolated source repository | Created by the Sites publishing workflow; not a GitHub repository |
-| `isuranga-CJ/velora-poker` GitHub repository | Intended name only; repository-creation capability is absent from the connected GitHub tool set |
+| `isuranga-CJ/velora-poker` GitHub repository | Created by the user; source uploaded and verified |
 | Supabase organization | `isuranga-CJ's Org` was discovered; explicit organization selection and provider cost confirmation are required before provisioning |
 | New Supabase project | Not created; do not reuse CJ Life Management or Royal Casino resources |
 | Frontend Site | New `velora-poker-cj` project |
 | Vercel | Connected `Z BORN GEN` team inspected; no existing project modified |
-| Dedicated server | Container source ready; Render and Railway plugins were discovered, neither was connected at inspection |
-| Storage | Current SQLite needs a private persistent volume; planned PostgreSQL eliminates single-file storage limitation |
+| Dedicated server | Render connected; My Workspace explicitly approved; free service deployment configuration ready |
+| Storage | SQLite for local development; PostgreSQL required for hosted wallets; external database not yet provisioned |
 | Paid services | None purchased, subscribed to, or provisioned |
 
 ## Relational target design — planned, not applied

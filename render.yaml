@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: velora-poker-game-cj
+    runtime: docker
+    repo: https://github.com/isuranga-CJ/velora-poker
+    branch: main
+    region: singapore
+    plan: free
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGINS
+        value: https://velora-poker-cj.dewybow7.chatgpt.site
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
