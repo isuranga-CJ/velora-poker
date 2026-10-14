@@ -1,0 +1,7 @@
+node_modules
+.git
+.env*
+dist
+.sites-runtime
+.wrangler
+*.sqlite*
