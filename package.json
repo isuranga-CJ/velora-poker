@@ -14,7 +14,11 @@
     "db:generate": "drizzle-kit generate",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "server": "node --experimental-strip-types server/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:cloudflare": "node --test tests/cloudflare.test.mjs",
+    "worker:check": "wrangler deploy --dry-run --config workers/wrangler.jsonc",
+    "worker:deploy": "wrangler deploy --config workers/wrangler.jsonc",
+    "test:all": "node --experimental-strip-types --test tests/*.test.ts tests/*.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

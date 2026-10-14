@@ -14,6 +14,10 @@ The browser receives only a player-scoped projection. The deck and other players
 
 The Node server serializes mutations through one async queue, checks authentication/expiry and table revision, validates rules, updates balances and state, commits the selected storage transaction, then acknowledges/broadcasts. Failed command mutations restore the preceding snapshot. Duplicate IDs return acknowledgments without applying rewards or bets twice. Stale hand IDs and versions prevent old commands being used in a later hand.
 
+## Free beta topology
+
+Sites frontend → Cloudflare Worker → one SQLite Durable Object for the beta world. Supabase Free provides only account authentication. Hibernating sockets and alarms replace the Node process timers. The account is not authorized in the current runtime; no live Worker URL has been verified. This path does not require PostgreSQL, a Render card or a paid disk.
+
 ## Intended production topology
 
 Frontend (Sites or Vercel) → regional dedicated Node WebSocket service → PostgreSQL in the same region. Supabase provides Auth and PostgreSQL. Later, Redis provides presence, routing and table ownership leases; it never independently settles wallets. One authoritative owner processes each table. Horizontal scaling requires fencing tokens and durable transactions before additional workers are enabled.

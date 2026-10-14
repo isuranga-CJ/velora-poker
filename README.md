@@ -14,9 +14,13 @@ A new, isolated virtual-chip Texas Hold’em project. No Royal Casino repository
 
 The deployed website is an **early-access frontend and 3D room preview**. The multiplayer server is implemented and tested locally. A hosted service may run in **provisioning mode** until its Auth and PostgreSQL configuration is present; provisioning mode exposes health/readiness only and denies gameplay. Online registration is explicitly closed until configuration exists. The Supabase email login path is implemented but not provisioned or integration-tested. Google login is not implemented.
 
-Development uses a private **SQLite** file. The hosted path requires **PostgreSQL** and includes transactional snapshots, audit/history and process-owner fencing; this version must not be horizontally scaled or advertised as production-ready. Supabase is not shared with another project. Account names in development are display names, not globally unique handles.
+Development uses a private **SQLite** file. The optional Node hosting path requires **PostgreSQL** with transactional snapshots and owner fencing. The free Cloudflare beta stores wallets and game state in SQLite Durable Objects; this version must not be horizontally scaled or advertised as production-ready. Supabase is not shared with another project. Account names in development are display names, not globally unique handles.
 
-The frontend uses the supplied Sites Vinext (Next-compatible) deployment adapter; the game server remains a separate Node process. Vercel frontend deployment is a prepared future option, not a completed deployment. Do not run the game server as a short-lived frontend function.
+The frontend uses the supplied Sites Vinext (Next-compatible) deployment adapter; the game backend is separately deployable as the Cloudflare beta Worker or the Node service. Vercel frontend deployment is a prepared future option, not a completed deployment. Do not run the game server as a short-lived frontend function.
+
+## Free Cloudflare beta option
+
+The `workers/` adapter uses SQLite Durable Objects, WebSocket Hibernation and alarms. See [Free testing setup](docs/FREE_TESTING.md). This is now the recommended testing deployment path; Render/PostgreSQL remains an optional later path. The Cloudflare account is not yet authorized, so this source does not imply a live backend.
 
 ## Run locally
 

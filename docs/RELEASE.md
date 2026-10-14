@@ -10,6 +10,10 @@
 - PostgreSQL SQL tests using PGlite: atomic snapshot/audit/history, duplicate audit safety, owner fencing, rollback on audit failure, and denial to anon/authenticated roles.
 - Delayed persistence serialization and failed-commit acknowledgement denial; closed provisioning endpoints.
 
+## Cloudflare free testing path
+
+A separate SQLite Durable Object adapter is added in `workers/`. Local workerd tests verify the existing socket protocol, full hands, wallet state, privacy, room access and cold restart recovery. Auth is mocked only in tests; real Supabase/Cloudflare account integration remains unverified. See FREE_TESTING.md for the deployment steps and limits.
+
 ## Not verified or not implemented
 
 - No browser-control skill is available in this managed environment. Browser UI, touch controls, WebGL rendering, accessibility interactions, physical-device FPS and mobile Safari/Android behavior have not been visually verified.
@@ -23,9 +27,10 @@
 
 ## Next concrete milestone
 
-1. GitHub source is synced to isuranga-CJ/velora-poker.
-2. Confirm the new Supabase organization and provider-quoted cost; create a Singapore project and provision account configuration.
-3. Deploy the dedicated Render service on the free plan, then configure its existing production environment once Auth/database are available.
-4. Apply server/schema.sql only to the new project and run external PostgreSQL/RLS/restore tests.
-5. Deploy the server, configure the frontend origin, and verify two independent browser accounts through a complete hand over the public internet.
-6. Only then open public multiplayer registration, followed by mobile QA and performance measurement.
+1. Authorize the Cloudflare Free account or connect this GitHub repository through Workers Builds.
+2. Create the new isolated Supabase Free project and verify test-account registration/email delivery.
+3. Deploy the Worker and configure its Supabase URL/publishable key.
+4. Wire the actual returned Worker URL into the existing Site, using `NEXT_PUBLIC_GAME_TRANSPORT=cloudflare`.
+5. Verify two real accounts through a full hand and reconnect over the public internet; then run mobile QA and measure performance.
+
+The Render/PostgreSQL path remains available for later hosting work. The free beta does not require its billing/card setup or its PostgreSQL schema.
