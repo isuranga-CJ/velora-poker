@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from './random.ts';
 export type Card = string;
 export type Player = {
     id: string;

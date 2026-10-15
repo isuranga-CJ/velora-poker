@@ -9,3 +9,9 @@ Original asset: public/assets/velora-casino-room.webp. Generated with the built-
 Use /?view=table to open the room directly. Portrait phones can horizontally scroll the landscape composition; landscape is the preferred view. Reduced-motion users receive no card-deal animations. The image-based room has no WebGL requirement; the existing procedural 3D lobby preview remains available.
 
 Public multiplayer backend provisioning is still pending. This visual update does not open account registration or enable unconfigured hosted gameplay. Browser visual QA was unavailable in this environment; type checks, application build and automated game tests are reported separately.
+
+## Local practice mode
+
+`/?view=practice` runs a separate five-seat practice session: the player and four clearly labelled basic bots. The same Hold’em engine supplies dealing, legal actions, side pots, showdown, payouts and dealer rotation. Bots use only their own cards and the public board with a simple randomized policy; they are not advanced poker AI. Practice does not require authentication and cannot credit online wallets. Refresh clears the local session; restart resets all five stacks to 1,000.
+
+The engine now uses a shared Web Crypto helper for Node, Workers and browsers. Rejection sampling avoids modulo bias in deck shuffling. Online actions remain server-authoritative; the browser runs the engine only for explicitly labelled local practice. Existing socket/runtime tests must pass after this shared-engine change.

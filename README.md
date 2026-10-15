@@ -4,7 +4,8 @@ A new, isolated virtual-chip Texas Hold’em project. No Royal Casino repository
 
 ## What works in this milestone
 
-- React/TypeScript frontend with an original procedural Three.js / React Three Fiber poker room, responsive lobby, 2D fallback, quality settings, card meshes and chip stacks.
+- React/TypeScript frontend with an original casino table composition, procedural Three.js lobby room, responsive lobby, card animations and chip stacks.
+- Playable local practice against four explicitly labelled basic bots, using the shared Hold’em rules engine. Practice chips are isolated from online wallets and reset on refresh.
 - Separate Node 24 WebSocket server: 2–9 player tables, secure shuffle, authoritative actions, heads-up blinds, betting streets, minimum raises, short all-ins, side pots, split pots and odd-chip allocation.
 - Starting balance and daily rewards, table buy-ins/returns, atomic local snapshot + audit transactions, reconnect recovery, private password-protected rooms, spectator-safe views, action IDs and stale-state protection.
 - Thirty-second turns, heartbeat detection, automatic hand starts, stored public showdown history. No bots appear as people.
@@ -12,7 +13,7 @@ A new, isolated virtual-chip Texas Hold’em project. No Royal Casino repository
 
 ## Honest release boundaries
 
-The deployed website is an **early-access frontend and 3D room preview**. The multiplayer server is implemented and tested locally. A hosted service may run in **provisioning mode** until its Auth and PostgreSQL configuration is present; provisioning mode exposes health/readiness only and denies gameplay. Online registration is explicitly closed until configuration exists. The Supabase email login path is implemented but not provisioned or integration-tested. Google login is not implemented.
+The deployed website is an **early-access frontend with local bot practice and a room preview**. Local practice does not require an account; it is not online multiplayer. The multiplayer server is implemented and tested locally. A hosted service may run in **provisioning mode** until its Auth and PostgreSQL configuration is present; provisioning mode exposes health/readiness only and denies gameplay. Online registration is explicitly closed until configuration exists. The Supabase email login path is implemented but not provisioned or integration-tested. Google login is not implemented.
 
 Development uses a private **SQLite** file. The optional Node hosting path requires **PostgreSQL** with transactional snapshots and owner fencing. The free Cloudflare beta stores wallets and game state in SQLite Durable Objects; this version must not be horizontally scaled or advertised as production-ready. Supabase is not shared with another project. Account names in development are display names, not globally unique handles.
 
@@ -70,7 +71,9 @@ Apply `server/schema.sql` to the new project before starting the hosted game. Th
 - `server/app.ts`: HTTP/WebSocket transport, auth, wallet and snapshot persistence.
 - `server/index.ts`: fail-closed server entry point with provisioning readiness.
 - `server/storage.ts`, `server/schema.sql`: durable storage adapters and private PostgreSQL schema.
-- `app/page.tsx`, `components/PokerScene.tsx`: lobby and playable table client.
+- `app/page.tsx`, `components/CasinoTable.tsx`, `components/PokerScene.tsx`: lobby and table clients.
+- `components/PracticeTable.tsx`, `game/practice.ts`: isolated local practice with basic bots.
+- `game/random.ts`: unbiased secure randomness shared across browser, Node and Workers.
 - `tests/`: engine and genuine multi-client socket integration tests.
 - `docs/ARCHITECTURE.md`: target architecture, resources, budgets and schema plan.
 - `docs/RELEASE.md`: verified scope, pending work and deployment gates.
