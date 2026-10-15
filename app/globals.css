@@ -15,3 +15,83 @@
 /* Table polish: dedicated media tools and immersive viewport. */
 .casino-toolbar{gap:.5em}.casino-toolbar .casino-tool:nth-of-type(2){margin-left:0}.casino-toolbar>.casino-tool:nth-last-child(2){margin-left:auto}.casino-media-tools{margin-left:auto;display:flex;align-items:center;gap:.5em}.casino-volume{position:relative}.casino-volume summary{list-style:none;cursor:pointer}.casino-volume summary::-webkit-details-marker{display:none}.casino-volume>label{position:absolute;top:calc(100% + 10px);right:0;width:190px;border:1px solid #ac87b9;background:#1b0e2bf5;border-radius:9px;padding:14px;color:#f5e5ff;font-size:12px;box-shadow:0 8px 25px #0008;z-index:20}.casino-volume output{float:right;color:#f0d28e}.casino-volume input{display:block;width:100%;margin:13px 0 2px;accent-color:#e0b75d}.casino-sound-unlock{position:absolute;top:10%;right:2%;z-index:8;background:#1a102ddd;border:1px solid #e6cb82;color:#ffdf91;border-radius:20px;padding:.5em .85em;font-size:.65em;box-shadow:0 2px 6px #0008}.casino-media-message{position:absolute;top:17%;left:50%;transform:translateX(-50%);z-index:30;background:#241330f5;border:1px solid #d7b777;border-radius:8px;padding:10px 15px;font-size:12px;text-align:center;max-width:75%;color:#ffe8b2}.casino-stage:fullscreen,.casino-stage.casino-theater{width:100vw;height:100dvh;max-width:none;aspect-ratio:auto;overflow:hidden;font-size:clamp(9px,min(1.2vw,2.15vh),21px);background-color:#110b20}.casino-stage:fullscreen::backdrop{background:#090613}.casino-stage.casino-theater{position:fixed;inset:0;z-index:1000}.casino-turn-ring{position:absolute!important;inset:-.42em;border-radius:50%;background:conic-gradient(#adff64 var(--turn-progress),#25123277 0);mask:radial-gradient(circle,transparent 65%,#000 68%);pointer-events:none}.casino-avatar>span.casino-turn-ring{font-size:inherit}.casino-seat.is-winner .casino-avatar{border-color:#ffd577;box-shadow:0 0 1.5em #ffbf4d99}.casino-seat.is-winner .casino-balance{color:#fff4c6;border-color:#f7ca70;background:linear-gradient(#775021,#201124)}.casino-seat.is-me .casino-player-cards{left:76%;top:16%;font-size:1.16em}.casino-seat.is-me .casino-balance{z-index:6;top:8.2em;left:38%;font-size:.9em}.casino-seat.is-me .casino-player-status{z-index:7;top:13.6em;left:-.2em}.casino-action-dock .raise-control>button{white-space:nowrap;min-width:5.7em}.casino-hand-label{left:67%;bottom:16%;padding:.45em 1.2em}.casino-result{box-shadow:0 0 20px #eec26d40;max-width:78%;white-space:normal;text-align:center}.casino-chip-stack{animation:casino-bet-in .25s ease-out}.casino-board .casino-card{box-shadow:0 .2em .6em #0009}.casino-action-dock{padding-bottom:env(safe-area-inset-bottom,0px)}@keyframes casino-bet-in{from{translate:0 .6em;opacity:.3}to{translate:0 0;opacity:1}}@media(orientation:landscape) and (max-height:600px){.casino-hand-label{bottom:16%}.casino-action-dock{bottom:1.8%}.casino-media-tools .casino-tool{width:2.55em;height:2.55em}}@media(prefers-reduced-motion:reduce){.casino-chip-stack{animation:none}}
 .casino-toolbar>.casino-tool:not(:first-child){margin-left:0}.casino-toolbar>.casino-connection{margin-right:auto}.casino-toolbar>.casino-media-tools{margin-left:0}
+/* Centered, colour-coded action dock on all table modes. */
+.casino-action-dock,
+.practice-page .casino-action-dock {
+  left:50%;
+  right:auto;
+  width:min(82%,1060px);
+  transform:translateX(-50%);
+  bottom:1.8%;
+}
+.casino-action-dock .actions {
+  margin:0 auto;
+  justify-content:center;
+  gap:clamp(7px,.75vw,13px);
+  padding:.5em;
+  border:1px solid #dac2f52b;
+  border-radius:13px;
+  background:linear-gradient(180deg,#1b102767,#10081ed9);
+  box-shadow:0 8px 22px #0007;
+}
+.casino-action-dock .actions>button,
+.casino-action-dock .raise-control>button {
+  min-height:clamp(40px,6.8vh,56px);
+  border-radius:8px;
+  border-width:1px;
+  font-weight:800;
+  font-size:clamp(11px,.95vw,16px);
+  letter-spacing:.04em;
+  box-shadow:inset 0 1px 0 #ffffff4d,0 3px 0 #07040c99,0 4px 12px #0004;
+  transition:filter .16s,box-shadow .16s,translate .16s;
+}
+.casino-action-dock .actions>.fold-button {
+  background:linear-gradient(180deg,#ce4764,#92283e);
+  border-color:#f89aaf;
+  color:#fff;
+}
+.casino-action-dock .actions>.fold-button+button {
+  background:linear-gradient(180deg,#118775,#075d57);
+  border-color:#65e6ce;
+  color:#fff;
+}
+.casino-action-dock .raise-control>button.primary,
+.casino-action-dock .actions>button.primary {
+  background:linear-gradient(180deg,#ffe19a,#df9c36);
+  border-color:#ffe8b5;
+  color:#291800;
+}
+.casino-action-dock .actions>.fold-button~button:last-child {
+  background:linear-gradient(180deg,#8853d0,#52288d);
+  border-color:#cda3ff;
+  color:#fff;
+}
+.casino-action-dock .raise-control {
+  gap:6px;
+  align-items:stretch;
+}
+.casino-action-dock .raise-control input {
+  width:4.7em;
+  border:1px solid #ccad74;
+  border-radius:8px;
+  background:#1a1029;
+  color:#ffe5a7;
+  text-align:center;
+  font-weight:700;
+  font-size:clamp(11px,.95vw,16px);
+}
+.casino-action-dock .actions>button:disabled,
+.casino-action-dock .raise-control>button:disabled {
+  opacity:.48;
+  filter:saturate(.55);
+  box-shadow:inset 0 1px 0 #ffffff22;
+}
+.casino-action-dock .actions>button:hover:not(:disabled),
+.casino-action-dock .raise-control>button:hover:not(:disabled) {
+  box-shadow:inset 0 1px 0 #ffffff66,0 0 13px #e5b9ff45;
+}
+@media(orientation:landscape) and (max-height:450px) {
+  .casino-action-dock,.practice-page .casino-action-dock{bottom:1%;width:84%}
+  .casino-action-dock .actions{padding:.35em}
+  .casino-action-dock .actions>button,.casino-action-dock .raise-control>button{min-height:36px}
+}
