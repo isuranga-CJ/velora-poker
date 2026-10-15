@@ -15,3 +15,11 @@ Public multiplayer backend provisioning is still pending. This visual update doe
 `/?view=practice` runs a separate five-seat practice session: the player and four clearly labelled basic bots. The same Hold’em engine supplies dealing, legal actions, side pots, showdown, payouts and dealer rotation. Bots use only their own cards and the public board with a simple randomized policy; they are not advanced poker AI. Practice does not require authentication and cannot credit online wallets. Refresh clears the local session; restart resets all five stacks to 1,000.
 
 The engine now uses a shared Web Crypto helper for Node, Workers and browsers. Rejection sampling avoids modulo bias in deck shuffling. Online actions remain server-authoritative; the browser runs the engine only for explicitly labelled local practice. Existing socket/runtime tests must pass after this shared-engine change.
+
+## Audio and immersive view
+
+Both preview/online tables and local practice share the same table media controls. Authored Web Audio effects distinguish card deals/flops, individual board cards, bets, checks, folds, your turn, final five-second countdown and winning/settlement. A first table interaction unlocks the browser audio context; a visible Tap for sound button is available before unlock. Mute and volume preferences persist locally, and unavailable audio reports a message rather than interrupting gameplay. Audio nodes disconnect when effects finish, and the context closes when leaving the table.
+
+Fullscreen requests originate from the user's button tap on the actual table element. Supported browsers use native Fullscreen API with a best-effort landscape lock. Fullscreen changes synchronize the exit icon and release any orientation lock. Unsupported/blocked environments receive an explicitly labelled expanded table fallback; browser chrome can remain visible in this fallback. Escape exits fallback and the native browser exit remains available. Fullscreen includes sound/volume and exit controls. Phone-specific fullscreen/audio behavior has not been physically verified in this environment.
+
+Visual polish keeps the current player's chip balance clear of the cards, removes the duplicated You label, adds a remaining-turn ring, and highlights winners. The game engine and practice bot policy are unchanged.
