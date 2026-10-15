@@ -1,0 +1,55 @@
+name: Deploy poker backend
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: velora-poker-beta-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      WRANGLER_SEND_METRICS: 'false'
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SUPABASE_URL: https://jmygmgcezbwapbavgime.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_2TtRKc5wo_bcoLlTBT_-DA_hZpvbNjz
+      ALLOWED_ORIGINS: https://velora-poker-cj.dewybow7.chatgpt.site
+      WORKER_URL: https://velora-poker-beta.chandradasaisuranga.workers.dev
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+      - name: Check deployment credentials
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Add CLOUDFLARE_API_TOKEN in repository Actions secrets.'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Add CLOUDFLARE_ACCOUNT_ID in repository Actions secrets.'; exit 1; }
+      - name: Deploy the existing poker Worker and SQLite Durable Object
+        shell: bash
+        run: >-
+          npx --yes --package=wrangler@4.92.0 wrangler deploy
+          --config workers/wrangler.jsonc
+          --var "SUPABASE_URL:$SUPABASE_URL"
+          --var "SUPABASE_PUBLISHABLE_KEY:$SUPABASE_PUBLISHABLE_KEY"
+          --var "ALLOWED_ORIGINS:$ALLOWED_ORIGINS"
+      - name: Check poker service readiness
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          const base = process.env.WORKER_URL;
+          const healthResponse = await fetch(`${base}/health`, {signal: AbortSignal.timeout(20000)});
+          if (!healthResponse.ok) throw new Error(`Health returned ${healthResponse.status}`);
+          const health = await healthResponse.json();
+          if (health.service !== 'velora-cloudflare' || health.ready !== true) throw new Error('The poker backend is not configured correctly.');
+          const readyResponse = await fetch(`${base}/ready`, {signal: AbortSignal.timeout(20000)});
+          if (!readyResponse.ok || (await readyResponse.json()).ready !== true) throw new Error('Readiness check failed.');
+          console.log('Poker backend configuration is ready. Real-user authentication and multiplayer still need testing.');
+          JS
