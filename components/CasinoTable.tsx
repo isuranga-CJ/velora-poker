@@ -22,7 +22,19 @@ function Card({ card, index, highlight = false }: { card: string | null; index: 
   const suit = card ? { s: '♠', h: '♥', d: '♦', c: '♣' }[card[1]] : null;
   const rank = card?.[0] === 'T' ? '10' : card?.[0];
   return <span className="casino-card-shell" style={{ '--card-index': Math.min(index, 8) } as CSSProperties} aria-label={card ? `${rank} ${suit}${highlight ? ', best hand' : ''}` : 'Face-down card'}><span className={`casino-card ${card ? 'face' : 'back'} ${card && 'hd'.includes(card[1]) ? 'red' : ''} ${highlight ? 'best-card' : ''}`} aria-hidden="true">
-    {card ? <><b>{rank}</b><small>{suit}</small><i>{suit}</i><span className="casino-card-corner" aria-hidden="true">{rank}<small>{suit}</small></span></> : <span className="casino-card-monogram" aria-hidden="true">V</span>}
+    <svg className="casino-card-art" viewBox="0 0 72 100" aria-hidden="true" focusable="false">
+      <rect x="1" y="1" width="70" height="98" rx="5" fill={card ? '#fffaf0' : '#452039'} stroke={highlight ? '#efc969' : '#e5d5ba'} strokeWidth="2" />
+      {card ? <g fill="currentColor" fontFamily="Georgia, serif">
+        <text x="7" y="25" fontSize="23" fontWeight="bold">{rank}</text>
+        <text x="9" y="44" fontSize="20">{suit}</text>
+        <text x="44" y="76" fontSize="39" textAnchor="middle">{suit}</text>
+        <g transform="rotate(180 36 50)"><text x="7" y="19" fontSize="15" fontWeight="bold">{rank}</text><text x="9" y="33" fontSize="13">{suit}</text></g>
+      </g> : <>
+        <rect x="5" y="5" width="62" height="90" rx="3" fill="none" stroke="#e8c88c" />
+        <path d="M6 20L60 94M6 40L46 94M6 60L32 94M12 6L66 80M27 6L66 60M42 6L66 40M6 80L60 6M6 60L46 6M6 40L32 6M12 94L66 20M27 94L66 40M42 94L66 60" fill="none" stroke="#d4ab69" strokeOpacity=".2" />
+        <text x="36" y="62" textAnchor="middle" fontFamily="Georgia, serif" fontSize="34" fill="#f3d79f">V</text>
+      </>}
+    </svg>
   </span></span>;
 }
 function Chips({ amount }: { amount: number }) {
@@ -59,7 +71,7 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
   const remaining = Math.max(0, Math.ceil(((table?.deadline || 0) - clock) / 1000));
   const resultKey = `${table?.handId}-${table?.phase}`;
   return <section className="casino-view" aria-label="Poker table">
-    <div ref={fullscreen.ref} className={`casino-stage seats-${count} ${fullscreen.theater ? 'casino-theater' : ''} ${myTurn ? 'my-turn' : ''}`} onPointerDownCapture={() => void audio.unlock()} onKeyDownCapture={() => void audio.unlock()}>
+    <div ref={fullscreen.ref} data-table-ui="cards-v3" className={`casino-stage seats-${count} ${table?.phase === 'complete' ? 'hand-settled' : ''} ${fullscreen.theater ? 'casino-theater' : ''} ${myTurn ? 'my-turn' : ''}`} onPointerDownCapture={() => void audio.unlock()} onKeyDownCapture={() => void audio.unlock()}>
       <div className="casino-room-art" />
       <div className="casino-table-vignette" aria-hidden="true" />
       <div className="casino-toolbar">{toolbar}<div className="casino-media-tools">

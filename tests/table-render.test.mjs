@@ -33,6 +33,10 @@ try {
   test('showdown highlights five visible cards and keeps final pot after settlement', () => {
     const html = render({ ...table, phase: 'complete', turn: -1, legal: null, pot: 0, payouts: { '0': 400 }, board: ['Ks', 'Qs', 'Js', 'Ts', '2d'] });
     assert.match(html, /FINAL POT/);
+    assert.match(html, /data-table-ui="cards-v3"/);
+    assert.match(html, /hand-settled/);
+    assert.equal((html.match(/class="casino-card-art"/g) || []).length, 9);
+    assert.doesNotMatch(html, /casino-card-corner/);
     assert.match(html, />400<\/b>/);
     assert.equal((html.match(/, best hand/g) || []).length, 5);
     assert.match(html, /Alice \+400/);

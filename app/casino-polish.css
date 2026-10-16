@@ -108,6 +108,12 @@
    Revealing an opponent's card must not replay its entry animation. */
 .casino-card-shell { display:block;position:relative;flex:none;width:3.35em;height:4.65em;animation:polish-card-enter .35s ease-out backwards;animation-delay:calc(var(--card-index)*40ms); }
 .casino-card-shell>.casino-card { width:100%;height:100%;animation:none;rotate:none;translate:none;backface-visibility:visible; }
+.casino-card-art { display:block;width:100%;height:100%;border-radius:.25em;overflow:hidden; }
+.casino-card-shell>.casino-card.face,.casino-card-shell>.casino-card.back { background:none;border:0; }
+.casino-stage .casino-board,.casino-stage .casino-player-cards { perspective:none; }
+.casino-stage.hand-settled .casino-card-shell,.casino-stage.hand-settled .casino-card-shell>.casino-card { animation:none!important;transition:none!important;translate:none;rotate:none; }
+.casino-stage.hand-settled .casino-card.best-card { box-shadow:0 0 0 2px #edc768,0 2px 5px #0006; }
+.casino-card-shell>.casino-card.back:after { display:none; }
 .casino-player-cards .casino-card-shell>.casino-card { transform:none;margin:0; }
 .casino-player-cards .casino-card-shell:first-child { transform:rotate(-12deg);margin-right:-1.65em; }
 .casino-player-cards .casino-card-shell:last-child { transform:rotate(12deg); }
