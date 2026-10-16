@@ -14,8 +14,9 @@ await mkdir(cache, { recursive: true });
 const directory = await mkdtemp(join(cache, 'velora-table-'));
 try {
   const output = join(directory, 'table.cjs');
-  await build({ entryPoints: ['components/CasinoTable.tsx'], bundle: true, platform: 'node', format: 'cjs', packages: 'external', outfile: output, jsx: 'automatic', logLevel: 'silent' });
+  await build({ stdin: { contents: "export { default } from './components/CasinoTable'; export { default as PracticeTable } from './components/PracticeTable';", resolveDir: process.cwd(), loader: 'tsx' }, bundle: true, platform: 'node', format: 'cjs', packages: 'external', outfile: output, jsx: 'automatic', logLevel: 'silent' });
   const CasinoTable = require(output).default;
+  const PracticeTable = require(output).PracticeTable;
   const now = 100000;
   const players = ['Alice', 'Bob'].map((name, i) => ({ id: String(i), name, stack: 1000, bet: 0, folded: false, connected: true, cards: i === 0 ? ['As', 'Ad'] : [null, null] }));
   const table = { id: 'test', name: 'Lounge', capacity: 6, small: 10, big: 20, button: 0, turn: 0, phase: 'preflop', board: [], handId: 'one', version: 1, deadline: now + 4000, pot: 30, payouts: {}, history: [], legal: { call: 20, min: 40, max: 1000, canRaise: true }, seats: players };
@@ -29,6 +30,11 @@ try {
       assert.match(html, /time-critical/);
       assert.equal((html.match(/Face-down card/g) || []).length, 2);
     }
+  });
+  test('practice ends at the action dock without the removed footer panel', () => {
+    const html = renderToStaticMarkup(React.createElement(PracticeTable, { onExit() {} }));
+    assert.match(html, /casino-action-dock/);
+    assert.doesNotMatch(html, /casino-rotate-note|practice-caption|class="history"|class="game-note"/);
   });
   test('showdown highlights five visible cards and keeps final pot after settlement', () => {
     const html = render({ ...table, phase: 'complete', turn: -1, legal: null, pot: 0, payouts: { '0': 400 }, board: ['Ks', 'Qs', 'Js', 'Ts', '2d'] });

@@ -83,7 +83,7 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
       {(fullscreen.message || audio.error) && <div className="casino-media-message" role="status">{fullscreen.message || audio.error}</div>}
       <div className="casino-table-title"><b>{table?.name || 'VELORA LOUNGE'}</b><span>{table ? `${table.small} / ${table.big} · No-limit Hold’em` : 'TABLE PREVIEW · 5 SEATS'}</span></div>
       <div className="casino-pot" aria-live="polite"><span className="casino-pot-chip" aria-hidden="true">V</span><b key={`${table?.handId}-${displayPot}`}>{displayPot.toLocaleString()}</b><small>{payouts.length ? 'FINAL POT' : 'TOTAL POT'}</small></div>
-      <div className="casino-street" key={resultKey}>{table ? phaseNames[table.phase] : 'Texas Hold’em'}<span>VIRTUAL CHIPS</span></div>
+      <div className="casino-street" key={`street-${resultKey}`}>{table ? phaseNames[table.phase] : 'Texas Hold’em'}<span>VIRTUAL CHIPS</span></div>
       <div className="casino-board" aria-label="Community cards">{Array.from({ length: 5 }, (_, i) => table?.board[i] ? <Card key={`${table.handId}-board-${i}`} card={table.board[i]} index={i < 3 ? i : 0} highlight={bestCards.includes(table.board[i])} /> : <span key={`placeholder-${i}`} className="casino-card-placeholder" aria-hidden="true"><Spade /></span>)}</div>
       {coords.map(([x, y], slot) => {
         const index = myIndex >= 0 ? (slot + myIndex) % count : slot;
@@ -107,11 +107,10 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
         return pos ? <span key={`${resultKey}-${id}`} className={`casino-chip-flight ${payoutFlight.includes(id) ? 'casino-payout-flight' : ''}`} style={{ '--from-x': `${pos[0]}%`, '--from-y': `${pos[1]}%` } as CSSProperties} aria-hidden="true">◉</span> : null;
       })}
       {me && !me.folded && me.cards.length > 0 && <div className="casino-hand-label"><b>{handLabel([...me.cards, ...(table?.board || [])])}</b><small>{bestCards.length ? 'BEST FIVE HIGHLIGHTED' : 'YOUR HAND'}</small></div>}
-      {payouts.length > 0 && <div className="casino-result" key={resultKey} role="status"><Trophy aria-hidden="true" /><div><small>{payouts.length > 1 ? 'MULTIPLE WINNERS' : 'WINNER'}</small><b>{payouts.map(([id, n]) => `${table?.seats.find(p => p.id === id)?.name || 'Player'} +${n.toLocaleString()}`).join(' · ')}</b></div></div>}
+      {payouts.length > 0 && <div className="casino-result" key={`winner-${table?.id}-${table?.handId}`} role="status"><Trophy aria-hidden="true" /><div><small>{payouts.length > 1 ? 'MULTIPLE WINNERS' : 'WINNER'}</small><b>{payouts.map(([id, n]) => `${table?.seats.find(p => p.id === id)?.name || 'Player'} +${n.toLocaleString()}`).join(' · ')}</b></div></div>}
       {!table && <div className="casino-preview-note">Your next great hand starts here.<span>Join an online table or warm up with practice.</span></div>}
       <div className={`casino-turn-prompt ${myTurn ? 'is-your-turn' : ''}`} role="status">{active ? myTurn ? 'Your move' : me?.folded ? 'You folded · watching the hand' : `${turnPlayer?.name || 'Player'} is thinking` : table?.phase === 'complete' ? 'Hand complete' : table ? 'Waiting for the next hand' : 'Take your seat'}{active && myTurn && <span>{remaining}s</span>}</div>
       <div className="casino-action-dock">{actions}</div>
     </div>
-    <p className="casino-rotate-note">For the widest table view, rotate your phone.</p>
   </section>;
 }
