@@ -1,4 +1,15 @@
 import { score5, type TableView } from '../game/engine.ts';
+import { handLabel } from './hand-label.ts';
+
+export function winnerHandLabel(table: TableView, playerId: string): string | null {
+  if (table.phase !== 'complete' || !(table.payouts[playerId] > 0)) return null;
+  const player = table.seats.find(p => p.id === playerId);
+  if (!player || player.folded) return null;
+  if (table.seats.filter(p => !p.folded).length === 1) return 'WON BY FOLD';
+  // Never infer a rank from the board when this player's private cards are hidden.
+  if (table.board.length !== 5 || player.cards.length !== 2 || player.cards.some(c => !c)) return 'HAND NOT SHOWN';
+  return handLabel([...player.cards, ...table.board]);
+}
 
 /** Uses only cards already visible to this viewer. */
 export function bestVisibleFive(input: (string | null)[]): string[] {

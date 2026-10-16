@@ -5,7 +5,7 @@ import { Maximize, Minimize, Volume2, VolumeX, SlidersHorizontal, Trophy, Spade 
 import { usePokerAudio } from '../hooks/use-poker-audio';
 import { useTableFullscreen } from '../hooks/use-table-fullscreen';
 import { handLabel } from '../lib/hand-label';
-import { bestVisibleFive, collectedBets, latestAction } from '../lib/table-presentation';
+import { bestVisibleFive, collectedBets, latestAction, winnerHandLabel } from '../lib/table-presentation';
 
 function positions(count: number) {
   if (count === 5) return [[50, 74], [24, 65], [11, 39], [24, 18], [89, 39]];
@@ -21,9 +21,9 @@ const phaseNames: Record<string, string> = { waiting: 'Waiting for players', pre
 function Card({ card, index, highlight = false }: { card: string | null; index: number; highlight?: boolean }) {
   const suit = card ? { s: '♠', h: '♥', d: '♦', c: '♣' }[card[1]] : null;
   const rank = card?.[0] === 'T' ? '10' : card?.[0];
-  return <span className={`casino-card ${card ? 'face' : 'back'} ${card && 'hd'.includes(card[1]) ? 'red' : ''} ${highlight ? 'best-card' : ''}`} style={{ '--card-index': index } as CSSProperties} aria-label={card ? `${rank} ${suit}${highlight ? ', best hand' : ''}` : 'Face-down card'}>
+  return <span className="casino-card-shell" style={{ '--card-index': Math.min(index, 8) } as CSSProperties} aria-label={card ? `${rank} ${suit}${highlight ? ', best hand' : ''}` : 'Face-down card'}><span className={`casino-card ${card ? 'face' : 'back'} ${card && 'hd'.includes(card[1]) ? 'red' : ''} ${highlight ? 'best-card' : ''}`} aria-hidden="true">
     {card ? <><b>{rank}</b><small>{suit}</small><i>{suit}</i><span className="casino-card-corner" aria-hidden="true">{rank}<small>{suit}</small></span></> : <span className="casino-card-monogram" aria-hidden="true">V</span>}
-  </span>;
+  </span></span>;
 }
 function Chips({ amount }: { amount: number }) {
   return <span className="casino-wager" aria-label={`${amount.toLocaleString()} chips bet`}><span className="casino-chip-stack" key={amount}>{[0, 1, 2, 3].map(i => <i key={i} />)}</span><b key={`value-${amount}`}>◉ {amount.toLocaleString()}</b></span>;
@@ -72,19 +72,20 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
       <div className="casino-table-title"><b>{table?.name || 'VELORA LOUNGE'}</b><span>{table ? `${table.small} / ${table.big} · No-limit Hold’em` : 'TABLE PREVIEW · 5 SEATS'}</span></div>
       <div className="casino-pot" aria-live="polite"><span className="casino-pot-chip" aria-hidden="true">V</span><b key={`${table?.handId}-${displayPot}`}>{displayPot.toLocaleString()}</b><small>{payouts.length ? 'FINAL POT' : 'TOTAL POT'}</small></div>
       <div className="casino-street" key={resultKey}>{table ? phaseNames[table.phase] : 'Texas Hold’em'}<span>VIRTUAL CHIPS</span></div>
-      <div className="casino-board" aria-label="Community cards">{Array.from({ length: 5 }, (_, i) => table?.board[i] ? <Card key={`${table.handId}-${i}-${table.board[i]}`} card={table.board[i]} index={i < 3 ? i : 0} highlight={bestCards.includes(table.board[i])} /> : <span key={`placeholder-${i}`} className="casino-card-placeholder" aria-hidden="true"><Spade /></span>)}</div>
+      <div className="casino-board" aria-label="Community cards">{Array.from({ length: 5 }, (_, i) => table?.board[i] ? <Card key={`${table.handId}-board-${i}`} card={table.board[i]} index={i < 3 ? i : 0} highlight={bestCards.includes(table.board[i])} /> : <span key={`placeholder-${i}`} className="casino-card-placeholder" aria-hidden="true"><Spade /></span>)}</div>
       {coords.map(([x, y], slot) => {
         const index = myIndex >= 0 ? (slot + myIndex) % count : slot;
         const p = table?.seats[index];
         const current = active && !!p && table?.turn === index;
         const mine = !!p && p.id === userId;
         const winner = payouts.find(([id]) => id === p?.id);
+        const winningRank = winner && p && table ? winnerHandLabel(table, p.id) : null;
         const action = p && last?.name === p.name && table?.seats.filter(seat => seat.name === p.name).length === 1 && !current && active ? last : null;
         const seconds = current ? remaining : 0;
         return <div key={p?.id || `empty-${slot}`} className={`casino-seat slot-${slot} ${mine ? 'is-me' : ''} ${winner ? 'is-winner' : ''} ${current ? 'on-turn' : ''} ${current && seconds <= 5 ? 'time-critical' : current && seconds <= 10 ? 'time-low' : ''} ${p?.folded ? 'is-folded' : ''} ${!p ? 'is-empty' : ''}`} style={{ left: `${x}%`, top: `${y}%`, '--seat-hue': (index * 61 + 210) % 360, '--turn-progress': `${Math.min(100, seconds / 30 * 100)}%`, '--deal-x': `${(50 - x) * 1.5}px`, '--deal-y': `${(28 - y) * 1.5}px` } as CSSProperties}>
           <span className="casino-player-name">{p ? p.name + (mine && p.name.toLowerCase() !== 'you' ? ' · YOU' : '') : 'OPEN SEAT'}</span>
-          <div className="casino-avatar">{current && <span className="casino-turn-ring" aria-hidden="true" />}{p ? <span>{p.name.slice(0, 2).toUpperCase()}</span> : <span>+</span>}{table?.button === index && p && <b className="casino-dealer-button" title="Dealer button">D</b>}{p && !p.connected && <span className="casino-offline-dot" title="Disconnected" />}{winner && <span className="casino-winner-crown" aria-label="Winner"><Trophy size={16} /></span>}</div>
-          {p && <><div className="casino-player-cards">{!p.folded && p.cards.map((c, i) => <Card key={`${table?.handId}-${p.id}-${i}-${c}`} card={c} index={slot * 2 + i} highlight={!!c && mine && bestCards.includes(c)} />)}</div><b className="casino-balance">◉ {p.stack.toLocaleString()}</b><span className="casino-player-status">{winner ? `+${winner[1].toLocaleString()} · WON` : p.folded ? 'FOLDED' : !p.connected ? 'OFFLINE' : current ? `${seconds}s · ${mine ? 'YOUR TURN' : 'THINKING'}` : p.stack === 0 ? 'ALL-IN' : ''}</span>{action && <span className={`casino-action-badge action-${action.move}`} key={`${table?.handId}-${table?.history.length}-${action.label}`}>{action.label}</span>}{p.bet > 0 && <Chips amount={p.bet} />}</>}
+          <div className="casino-avatar">{current && <span className="casino-turn-ring" aria-hidden="true" />}{p ? <span>{p.name.slice(0, 2).toUpperCase()}</span> : <span>+</span>}{table?.button === index && p && <b className="casino-dealer-button" title="Dealer button">D</b>}{p && !p.connected && <span className="casino-offline-dot" title="Disconnected" />}{winner && <span className="casino-winner-ring" aria-hidden="true" />}{winner && <span className="casino-winner-crown" aria-label="Winner"><Trophy size={16} /></span>}</div>
+          {p && <><div className="casino-player-cards">{!p.folded && p.cards.map((c, i) => <Card key={`${table?.handId}-${p.id}-${i}`} card={c} index={slot * 2 + i} highlight={!!c && mine && bestCards.includes(c)} />)}</div><b className="casino-balance">◉ {p.stack.toLocaleString()}</b>{winningRank && <span className="casino-winner-rank">{winningRank}</span>}<span className="casino-player-status">{winner ? `+${winner[1].toLocaleString()} · WON` : p.folded ? 'FOLDED' : !p.connected ? 'OFFLINE' : current ? `${seconds}s · ${mine ? 'YOUR TURN' : 'THINKING'}` : p.stack === 0 ? 'ALL-IN' : ''}</span>{action && <span className={`casino-action-badge action-${action.move}`} key={`${table?.handId}-${table?.history.length}-${action.label}`}>{action.label}</span>}{p.bet > 0 && <Chips amount={p.bet} />}</>}
         </div>;
       })}
       {[...collection, ...payoutFlight].map(id => {

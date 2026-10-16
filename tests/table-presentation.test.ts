@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bestVisibleFive, collectedBets, latestAction } from '../lib/table-presentation.ts';
+import { bestVisibleFive, collectedBets, latestAction, winnerHandLabel } from '../lib/table-presentation.ts';
 import { newTable, seat, start, view, type TableView } from '../game/engine.ts';
 
 test('best-five highlights use kickers and never invent hidden cards', () => {
@@ -35,4 +35,22 @@ test('public action labels handle names containing punctuation without HTML', ()
   assert.equal(latestAction(t)?.label, 'CHECK');
   t.history = ['Hand started'];
   assert.equal(latestAction(t), null);
+});
+
+test('winner rank uses revealed cards, distinguishes folds, and clears next hand', () => {
+  const t = snapshot();
+  t.phase = 'complete'; t.payouts = { a: 200 };
+  t.board = ['Ts', 'Js', 'Qs', '2d', '3h'];
+  t.seats[0].cards = ['As', 'Ks'];
+  assert.equal(winnerHandLabel(t, 'a'), 'ROYAL FLUSH');
+  t.board = ['Ts', 'Js', 'Qs', '2s', '3h'];
+  t.seats[0].cards = ['8s', 'Ks'];
+  assert.equal(winnerHandLabel(t, 'a'), 'FLUSH');
+  t.seats[0].cards = [null, null];
+  assert.equal(winnerHandLabel(t, 'a'), 'HAND NOT SHOWN');
+  t.seats[1].folded = true;
+  assert.equal(winnerHandLabel(t, 'a'), 'WON BY FOLD');
+  assert.equal(winnerHandLabel(t, 'b'), null);
+  t.phase = 'preflop';
+  assert.equal(winnerHandLabel(t, 'a'), null);
 });

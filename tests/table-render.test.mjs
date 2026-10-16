@@ -36,7 +36,19 @@ try {
     assert.match(html, />400<\/b>/);
     assert.equal((html.match(/, best hand/g) || []).length, 5);
     assert.match(html, /Alice \+400/);
+    assert.match(html, /casino-winner-ring/);
+    assert.match(html, /casino-winner-rank">ROYAL FLUSH/);
     assert.doesNotMatch(html, /on-turn/);
+  });
+  test('all payout winners receive an orbit and rank, including different side-pot hands', () => {
+    const seats = [{ ...players[0], cards: ['Ah', 'Ad'] }, { ...players[1], cards: ['Kh', 'Kd'] }];
+    const html = render({ ...table, seats, phase: 'complete', turn: -1, payouts: { '0': 300, '1': 100 }, board: ['Ac', 'Ks', '2d', '3h', '5c'] });
+    assert.equal((html.match(/class="casino-winner-ring"/g) || []).length, 2);
+    assert.equal((html.match(/casino-winner-rank">THREE OF A KIND/g) || []).length, 2);
+    const folded = render({ ...table, phase: 'complete', turn: -1, payouts: { '1': 30 }, seats: [{ ...players[0], folded: true }, players[1]] });
+    assert.match(folded, /casino-winner-rank">WON BY FOLD/);
+    assert.equal((folded.match(/Face-down card/g) || []).length, 2);
+    assert.doesNotMatch(render(table), /casino-winner-ring/);
   });
   test('player names are escaped; folded cards and duplicate-name action badges stay hidden', () => {
     const seats = players.map(p => ({ ...p, name: '<img src=x>', folded: true }));

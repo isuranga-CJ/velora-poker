@@ -12,5 +12,6 @@ export function handLabel(input:(string|null)[]) {
   if(cards.length<5)return categories[category(cards)];
   let best=0;
   for(let a=0;a<cards.length-4;a++)for(let b=a+1;b<cards.length-3;b++)for(let c=b+1;c<cards.length-2;c++)for(let d=c+1;d<cards.length-1;d++)for(let e=d+1;e<cards.length;e++)best=Math.max(best,category([cards[a],cards[b],cards[c],cards[d],cards[e]]));
+  if(best===8&&[...'cdhs'].some(suit=>[...'TJQKA'].every(rank=>cards.includes(rank+suit))))return 'ROYAL FLUSH';
   return categories[best];
 }
