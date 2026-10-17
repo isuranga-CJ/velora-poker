@@ -6,6 +6,7 @@ import { usePokerAudio } from '../hooks/use-poker-audio';
 import { useTableFullscreen } from '../hooks/use-table-fullscreen';
 import { handLabel } from '../lib/hand-label';
 import { bestVisibleFive, collectedBets, latestAction, winnerHandLabel } from '../lib/table-presentation';
+import { portraitPositions } from '../lib/table-layout';
 
 function positions(count: number) {
   if (count === 5) return [[50, 74], [24, 65], [11, 39], [24, 18], [89, 39]];
@@ -61,6 +62,7 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
   const myIndex = table?.seats.findIndex(p => p.id === userId) ?? -1;
   const me = myIndex >= 0 ? table?.seats[myIndex] : undefined;
   const coords = positions(count);
+  const portraitCoords = portraitPositions(count);
   const payouts = table?.phase === 'complete' ? Object.entries(table.payouts).filter(([, n]) => n > 0) : [];
   const displayPot = payouts.length ? payouts.reduce((sum, [, amount]) => sum + amount, 0) : table?.pot || 0;
   const bestCards = useMemo(() => table?.phase === 'complete' && me && !me.folded ? bestVisibleFive([...me.cards, ...table.board]) : [], [table, me]);
@@ -74,6 +76,7 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
     <div ref={fullscreen.ref} data-table-ui="cards-v3" className={`casino-stage seats-${count} ${table?.phase === 'complete' ? 'hand-settled' : ''} ${fullscreen.theater ? 'casino-theater' : ''} ${myTurn ? 'my-turn' : ''}`} onPointerDownCapture={() => void audio.unlock()} onKeyDownCapture={() => void audio.unlock()}>
       <div className="casino-room-art" />
       <div className="casino-table-vignette" aria-hidden="true" />
+      <div className="casino-portrait-felt" aria-hidden="true" />
       <div className="casino-toolbar">{toolbar}<div className="casino-media-tools">
         <button className="casino-tool" onClick={audio.toggle} aria-label={audio.enabled ? 'Mute sounds' : 'Enable sounds'} aria-pressed={audio.enabled} title={audio.enabled ? 'Mute sounds' : 'Enable sounds'}>{audio.enabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
         <details className="casino-volume"><summary className="casino-tool" aria-label="Sound volume" title="Sound volume"><SlidersHorizontal size={18} /></summary><label>Sound volume <output>{Math.round(audio.volume * 100)}%</output><input aria-label="Sound volume" type="range" min="0" max="100" value={Math.round(audio.volume * 100)} onChange={e => audio.changeVolume(Number(e.target.value) / 100)} /></label></details>
@@ -94,7 +97,7 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
         const winningRank = winner && p && table ? winnerHandLabel(table, p.id) : null;
         const action = p && last?.name === p.name && table?.seats.filter(seat => seat.name === p.name).length === 1 && !current && active ? last : null;
         const seconds = current ? remaining : 0;
-        return <div key={p?.id || `empty-${slot}`} className={`casino-seat slot-${slot} ${mine ? 'is-me' : ''} ${winner ? 'is-winner' : ''} ${current ? 'on-turn' : ''} ${current && seconds <= 5 ? 'time-critical' : current && seconds <= 10 ? 'time-low' : ''} ${p?.folded ? 'is-folded' : ''} ${!p ? 'is-empty' : ''}`} style={{ left: `${x}%`, top: `${y}%`, '--seat-hue': (index * 61 + 210) % 360, '--turn-progress': `${Math.min(100, seconds / 30 * 100)}%`, '--deal-x': `${(50 - x) * 1.5}px`, '--deal-y': `${(28 - y) * 1.5}px` } as CSSProperties}>
+        return <div key={p?.id || `empty-${slot}`} className={`casino-seat slot-${slot} ${mine ? 'is-me' : ''} ${winner ? 'is-winner' : ''} ${current ? 'on-turn' : ''} ${current && seconds <= 5 ? 'time-critical' : current && seconds <= 10 ? 'time-low' : ''} ${p?.folded ? 'is-folded' : ''} ${!p ? 'is-empty' : ''}`} style={{ left: `${x}%`, top: `${y}%`, '--portrait-x': `${portraitCoords[slot][0]}%`, '--portrait-y': `${portraitCoords[slot][1]}%`, '--seat-hue': (index * 61 + 210) % 360, '--turn-progress': `${Math.min(100, seconds / 30 * 100)}%`, '--deal-x': `${(50 - x) * 1.5}px`, '--deal-y': `${(28 - y) * 1.5}px` } as CSSProperties}>
           <span className="casino-player-name">{p ? p.name + (mine && p.name.toLowerCase() !== 'you' ? ' · YOU' : '') : 'OPEN SEAT'}</span>
           <div className="casino-avatar">{current && <span className="casino-turn-ring" aria-hidden="true" />}{p ? <span>{p.name.slice(0, 2).toUpperCase()}</span> : <span>+</span>}{table?.button === index && p && <b className="casino-dealer-button" title="Dealer button">D</b>}{p && !p.connected && <span className="casino-offline-dot" title="Disconnected" />}{winner && <span className="casino-winner-ring" aria-hidden="true" />}{winner && <span className="casino-winner-crown" aria-label="Winner"><Trophy size={16} /></span>}</div>
           {p && <><div className="casino-player-cards">{!p.folded && p.cards.map((c, i) => <Card key={`${table?.handId}-${p.id}-${i}`} card={c} index={slot * 2 + i} highlight={!!c && mine && bestCards.includes(c)} />)}</div><b className="casino-balance">◉ {p.stack.toLocaleString()}</b>{winningRank && <span className="casino-winner-rank">{winningRank}</span>}<span className="casino-player-status">{winner ? `+${winner[1].toLocaleString()} · WON` : p.folded ? 'FOLDED' : !p.connected ? 'OFFLINE' : current ? `${seconds}s · ${mine ? 'YOUR TURN' : 'THINKING'}` : p.stack === 0 ? 'ALL-IN' : ''}</span>{action && <span className={`casino-action-badge action-${action.move}`} key={`${table?.handId}-${table?.history.length}-${action.label}`}>{action.label}</span>}{p.bet > 0 && <Chips amount={p.bet} />}</>}
@@ -104,7 +107,7 @@ export default function CasinoTable({ table, userId, clock, toolbar, actions }: 
         const index = table?.seats.findIndex(p => p.id === id) ?? -1;
         const slot = myIndex >= 0 ? (index - myIndex + count) % count : index;
         const pos = coords[slot];
-        return pos ? <span key={`${resultKey}-${id}`} className={`casino-chip-flight ${payoutFlight.includes(id) ? 'casino-payout-flight' : ''}`} style={{ '--from-x': `${pos[0]}%`, '--from-y': `${pos[1]}%` } as CSSProperties} aria-hidden="true">◉</span> : null;
+        return pos ? <span key={`${resultKey}-${id}`} className={`casino-chip-flight ${payoutFlight.includes(id) ? 'casino-payout-flight' : ''}`} style={{ '--from-x': `${pos[0]}%`, '--from-y': `${pos[1]}%`, '--portrait-from-x': `${portraitCoords[slot][0]}%`, '--portrait-from-y': `${portraitCoords[slot][1]}%` } as CSSProperties} aria-hidden="true">◉</span> : null;
       })}
       {me && !me.folded && me.cards.length > 0 && <div className="casino-hand-label"><b>{handLabel([...me.cards, ...(table?.board || [])])}</b><small>{bestCards.length ? 'BEST FIVE HIGHLIGHTED' : 'YOUR HAND'}</small></div>}
       {payouts.length > 0 && <div className="casino-result" key={`winner-${table?.id}-${table?.handId}`} role="status"><Trophy aria-hidden="true" /><div><small>{payouts.length > 1 ? 'MULTIPLE WINNERS' : 'WINNER'}</small><b>{payouts.map(([id, n]) => `${table?.seats.find(p => p.id === id)?.name || 'Player'} +${n.toLocaleString()}`).join(' · ')}</b></div></div>}

@@ -1,0 +1,86 @@
+/* Only the regular upright phone view uses the vertical felt table.
+   Native fullscreen and the expanded fallback keep the existing room. */
+.casino-portrait-felt { display:none; }
+@media(max-width:700px) and (orientation:portrait) {
+  .casino-stage:not(:fullscreen):not(.casino-theater) {
+    width:100%;height:100svh;min-height:640px;aspect-ratio:auto;
+    font-size:clamp(9.5px,2.4vw,15px);background:radial-gradient(ellipse at 50% 35%,#19352f,#080f17 75%);
+    --portrait-pot-y:40%;
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-room-art {
+    inset:11% 0 auto;height:45%;background-size:auto 100%;background-position:center top;
+    clip-path:inset(0 0 59% 0);mask-image:none;filter:saturate(.8);
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-table-vignette {
+    background:linear-gradient(#07101cbf,transparent 15%,transparent 68%,#050c15aa);
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-portrait-felt {
+    display:block;position:absolute;inset:26% 2% 11.4%;z-index:0;pointer-events:none;
+    background:url('/assets/velora-portrait-table.svg') center/100% 100% no-repeat;
+    filter:drop-shadow(0 8px 10px #0008);
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-toolbar { top:max(12px,env(safe-area-inset-top)); }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-tool {
+    border-color:#7cae9466;color:#c5e8cf;background:linear-gradient(#1a332feF,#0b1722f5);
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-connection { color:#b7e0c4;border-color:#8cbda72e;background:#0c211fdb; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-table-title {
+    top:9%;left:4%;max-width:54%;font-size:.72em;border-left-color:#80bf9a;
+    background:linear-gradient(90deg,#071e1ad9,transparent);padding:.6em .8em;
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-sound-unlock { top:9%;right:3%; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat {
+    left:var(--portrait-x)!important;top:var(--portrait-y)!important;font-size:.86em;
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.is-me { font-size:1em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-player-name {
+    background:#081e1dd9;border:1px solid #6b9e7e40;font-size:.8em;max-width:10em;
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-balance { background:linear-gradient(#172c28,#07151b);border-color:#72998080; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat:not(.is-me) .casino-player-cards { left:62%;top:28%;font-size:.68em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-3:not(.is-me) .casino-player-cards,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-4:not(.is-me) .casino-player-cards,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-5:not(.is-me) .casino-player-cards,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-6:not(.is-me) .casino-player-cards,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-7:not(.is-me) .casino-player-cards,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-8:not(.is-me) .casino-player-cards { left:-8%; }
+  /* Six/nine-seat layouts have one more player on the left rail. */
+  .casino-stage.seats-6:not(:fullscreen):not(.casino-theater) .casino-seat.slot-3 .casino-player-cards,
+  .casino-stage.seats-9:not(:fullscreen):not(.casino-theater) .casino-seat.slot-3 .casino-player-cards,
+  .casino-stage.seats-9:not(:fullscreen):not(.casino-theater) .casino-seat.slot-4 .casino-player-cards { left:62%; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.is-me .casino-player-cards { left:72%;top:17%;font-size:1.1em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-pot { top:40%;min-width:8em;font-size:1em;background:#092a22ec;border-color:#b3cba472; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-pot>small { color:#c0e2c8; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-street { top:46%;color:#d3e7d8;font-size:.7em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-street>span { color:#8caf9a; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-board { top:53%;font-size:1.15em;gap:.35em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-preview-note { top:56%;width:62%;color:#dcf1e3;font-size:1em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-preview-note>span { color:#aecfba; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-result { top:61%;max-width:64%;background:linear-gradient(#173d2ff5,#0d231ff5); }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-hand-label { bottom:15.5%;right:3%;background:linear-gradient(#244637,#0a201d);border-color:#8bb69a80; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-turn-prompt { bottom:10.5%;color:#c3dfcd;font-size:.8em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-action-dock { width:96%;bottom:max(2%,env(safe-area-inset-bottom)); }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-action-dock .actions { border-color:#8bb99b66;background:linear-gradient(#142e28ed,#081920f5); }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-wager { top:5.8em;left:110%;font-size:.86em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-3 .casino-wager,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-4 .casino-wager,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-5 .casino-wager,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-6 .casino-wager,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-7 .casino-wager,
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-8 .casino-wager { left:auto;right:105%; }
+  .casino-stage.seats-6:not(:fullscreen):not(.casino-theater) .casino-seat.slot-3 .casino-wager,
+  .casino-stage.seats-9:not(:fullscreen):not(.casino-theater) .casino-seat.slot-3 .casino-wager,
+  .casino-stage.seats-9:not(:fullscreen):not(.casino-theater) .casino-seat.slot-4 .casino-wager { left:110%;right:auto; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.slot-0 .casino-wager { left:28%;right:auto;top:-2.8em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-wager>b { padding:.3em .45em;background:#092a23e6;border-color:#87ae9166; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-winner-rank { font-size:.64em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-seat.is-me .casino-winner-rank { left:-.5em; }
+  .casino-stage.seats-9:not(:fullscreen):not(.casino-theater) .casino-seat:not(.is-me) { font-size:.73em; }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-chip-flight {
+    left:var(--portrait-from-x);top:var(--portrait-from-y);--flight-seat-x:var(--portrait-from-x);--flight-seat-y:var(--portrait-from-y);
+    animation-name:portrait-collect;
+  }
+  .casino-stage:not(:fullscreen):not(.casino-theater) .casino-payout-flight { animation-name:portrait-payout; }
+}
+@keyframes portrait-collect { 0%{opacity:0;scale:.7}15%{opacity:1}85%{opacity:1}100%{left:50%;top:40%;opacity:0;scale:.6} }
+@keyframes portrait-payout { 0%{left:50%;top:40%;opacity:0;scale:.7}15%{opacity:1}85%{opacity:1}100%{left:var(--flight-seat-x);top:var(--flight-seat-y);opacity:0;scale:.8} }

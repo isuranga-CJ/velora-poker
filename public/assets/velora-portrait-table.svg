@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="rail" x1="0" x2="1" y2="1">
+      <stop stop-color="#576663"/><stop offset=".12" stop-color="#1c282b"/><stop offset=".5" stop-color="#10191e"/><stop offset=".88" stop-color="#344440"/><stop offset="1" stop-color="#72817a"/>
+    </linearGradient>
+    <radialGradient id="felt" cx="44%" cy="35%" r="80%">
+      <stop stop-color="#217b59"/><stop offset=".65" stop-color="#126146"/><stop offset="1" stop-color="#093d30"/>
+    </radialGradient>
+    <linearGradient id="edge" x2="0" y2="1">
+      <stop stop-color="#8acda7"/><stop offset=".25" stop-color="#27785a"/><stop offset=".8" stop-color="#154d3e"/><stop offset="1" stop-color="#6dbb91"/>
+    </linearGradient>
+    <pattern id="weave" width="4" height="4" patternUnits="userSpaceOnUse">
+      <path d="M0 0h4M0 2h4" stroke="#d9ffe6" stroke-opacity=".025"/>
+    </pattern>
+  </defs>
+  <path d="M88 7H312L390 79V715L316 791H84L10 715V79Z" fill="#050d12" stroke="#29604d" stroke-width="2"/>
+  <path d="M90 16H310L380 83V711L310 780H90L20 711V83Z" fill="url(#rail)" stroke="#76877b" stroke-opacity=".35" stroke-width="2"/>
+  <path d="M96 34H304L362 91V703L302 760H98L38 703V91Z" fill="url(#felt)" stroke="url(#edge)" stroke-width="5"/>
+  <path d="M96 34H304L362 91V703L302 760H98L38 703V91Z" fill="url(#weave)"/>
+  <path d="M104 63H296L341 107V685L292 733H108L59 685V107Z" fill="none" stroke="#acf0c3" stroke-opacity=".12" stroke-width="1"/>
+  <path d="M117 238H283L310 268V568L281 599H119L90 568V268Z" fill="none" stroke="#b0f9d0" stroke-opacity=".035" stroke-width="3"/>
+  <text x="200" y="510" text-anchor="middle" fill="#021e18" fill-opacity=".24" font-family="Georgia,serif" font-size="29" letter-spacing="8">VELORA</text>
+  <text x="200" y="535" text-anchor="middle" fill="#cdf3d8" fill-opacity=".16" font-family="sans-serif" font-size="8" letter-spacing="4">NO-LIMIT HOLD’EM</text>
+</svg>

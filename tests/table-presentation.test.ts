@@ -2,6 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bestVisibleFive, collectedBets, latestAction, winnerHandLabel } from '../lib/table-presentation.ts';
 import { newTable, seat, start, view, type TableView } from '../game/engine.ts';
+import { portraitPositions } from '../lib/table-layout.ts';
+
+test('portrait seats put the viewer below the board with opponents on the side rails', () => {
+  for (const capacity of [2, 5, 6, 9]) {
+    const coords = portraitPositions(capacity);
+    assert.equal(coords.length, capacity);
+    assert.equal(new Set(coords.map(c => c.join(','))).size, capacity);
+    assert.equal(coords[0][0], 50);
+    assert.ok(coords[0][1] >= 80);
+    for (const [x, y] of coords.slice(1)) {
+      assert.ok(x <= 16 || x >= 84);
+      assert.ok(y >= 30 && y <= 75);
+    }
+  }
+});
 
 test('best-five highlights use kickers and never invent hidden cards', () => {
   assert.deepEqual(new Set(bestVisibleFive(['As', 'Ks', 'Qs', 'Js', 'Ts', '2d', '2h'])), new Set(['As', 'Ks', 'Qs', 'Js', 'Ts']));
