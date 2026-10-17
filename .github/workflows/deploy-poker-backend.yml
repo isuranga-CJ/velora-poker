@@ -1,6 +1,13 @@
 name: Deploy poker backend
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/**'
+      - 'game/**'
+      - 'tests/tournament.test.ts'
+      - '.github/workflows/deploy-poker-backend.yml'
 permissions:
   contents: read
 concurrency:
@@ -27,6 +34,8 @@ jobs:
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24'
+      - name: Verify poker and tournament rules
+        run: node --experimental-strip-types --test tests/engine.test.ts tests/tournament.test.ts
       - name: Check deployment credentials
         shell: bash
         run: |
@@ -59,7 +68,7 @@ jobs:
                 let data;
                 try { data = JSON.parse(body); }
                 catch { throw new Error(`${path} has not returned poker JSON yet`); }
-                if (data.ready !== true || (path === '/health' && data.service !== 'velora-cloudflare')) {
+                if (data.ready !== true || (path === '/health' && (data.service !== 'velora-cloudflare' || !data.features?.includes('friends-cup-v1')))) {
                   throw new Error(`${path} did not report a ready poker backend`);
                 }
               }
@@ -73,3 +82,4 @@ jobs:
           }
           throw new Error(`Poker readiness timed out: ${lastError?.message}`);
           JS
+

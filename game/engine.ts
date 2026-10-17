@@ -92,12 +92,12 @@ export function seat(t: Table, id: string, name: string, buyIn: number) { if (ac
     throw Error('Already seated'); if (t.seats.length >= t.capacity)
     throw Error('Table full'); if (!Number.isSafeInteger(buyIn) || buyIn < 400 || buyIn > 2000)
     throw Error('Buy-in must be 400–2,000'); t.seats.push({ id, name, stack: buyIn, bet: 0, total: 0, cards: [], folded: false, acted: false, actedAt: -1, connected: true }); t.version++; }
-export function start(t: Table) {
+export function start(t: Table, options: { includeDisconnected?: boolean } = {}) {
     if (active(t))
         throw Error('Hand already running');
-    if (t.seats.filter(p => p.stack > 0 && p.connected).length < 2)
+    if (t.seats.filter(p => p.stack > 0 && (p.connected || options.includeDisconnected)).length < 2)
         throw Error('Two connected players with chips are needed');
-    t.seats.forEach(p => { p.cards = []; p.bet = 0; p.total = 0; p.folded = p.stack === 0 || !p.connected; p.acted = false; p.actedAt = -1; });
+    t.seats.forEach(p => { p.cards = []; p.bet = 0; p.total = 0; p.folded = p.stack === 0 || (!p.connected && !options.includeDisconnected); p.acted = false; p.actedAt = -1; });
     t.button = next(t, t.button, p => !p.folded);
     t.deck = shuffledDeck();
     t.board = [];
