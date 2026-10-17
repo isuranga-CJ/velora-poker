@@ -1,0 +1,12 @@
+/* Recolour just the photographed felt; preserve its lighting and texture. */
+.casino-stage:fullscreen .casino-room-art::after,
+.casino-stage.casino-theater .casino-room-art::after {
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:#087348;mix-blend-mode:color;
+  mask-image:url('/assets/velora-felt-mask.svg');
+  mask-size:100% 100%;mask-position:center;mask-repeat:no-repeat;
+}
+@media(max-width:700px) and (orientation:portrait) {
+  .casino-stage:fullscreen .casino-room-art::after,
+  .casino-stage.casino-theater .casino-room-art::after { mask-size:auto 100%; }
+}
